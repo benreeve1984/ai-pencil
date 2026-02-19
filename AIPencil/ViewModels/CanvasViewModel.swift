@@ -26,20 +26,17 @@ final class CanvasViewModel: ObservableObject {
     // MARK: - Session Lifecycle
 
     /// Load the saved drawing data for a session into the canvas.
+    /// Falls back to a blank canvas if data is missing or corrupt.
     func loadDrawing(for session: Session) {
         self.session = session
 
-        if let data = session.canvasData {
-            do {
-                let drawing = try PKDrawing(data: data)
-                canvasView.drawing = drawing
-            } catch {
-                // REVIEW: Could log this. For now, start with a blank canvas.
-                canvasView.drawing = PKDrawing()
-            }
-        } else {
+        // REVIEW: Could log deserialization failures for diagnostics
+        guard let data = session.canvasData,
+              let drawing = try? PKDrawing(data: data) else {
             canvasView.drawing = PKDrawing()
+            return
         }
+        canvasView.drawing = drawing
     }
 
     /// Persist the current canvas drawing to the session's SwiftData store.

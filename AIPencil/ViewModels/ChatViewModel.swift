@@ -27,7 +27,7 @@ final class ChatViewModel: ObservableObject {
     }
 
     var sortedMessages: [ChatMessage] {
-        session.messages.sorted { $0.createdAt < $1.createdAt }
+        session.sortedMessages
     }
 
     // MARK: - Send
@@ -49,11 +49,7 @@ final class ChatViewModel: ObservableObject {
         session.updatedAt = Date()
         inputText = ""
 
-        // Create streaming placeholder for the assistant response
-        let assistantMessage = ChatMessage(role: .assistant, text: "")
-        assistantMessage.isStreaming = true
-        session.messages.append(assistantMessage)
-
+        let assistantMessage = addStreamingPlaceholder()
         trySave()
         startStreaming(assistantMessage: assistantMessage)
     }
@@ -102,11 +98,8 @@ final class ChatViewModel: ObservableObject {
         modelContext.delete(assistantMessage)
         trySave()
 
-        let newAssistant = ChatMessage(role: .assistant, text: "")
-        newAssistant.isStreaming = true
-        session.messages.append(newAssistant)
+        let newAssistant = addStreamingPlaceholder()
         trySave()
-
         startStreaming(assistantMessage: newAssistant)
     }
 
@@ -133,15 +126,20 @@ final class ChatViewModel: ObservableObject {
         let hasResponse = sorted.contains { $0.role == .assistant }
         guard !hasResponse else { return }
 
-        let assistantMessage = ChatMessage(role: .assistant, text: "")
-        assistantMessage.isStreaming = true
-        session.messages.append(assistantMessage)
+        let assistantMessage = addStreamingPlaceholder()
         trySave()
-
         startStreaming(assistantMessage: assistantMessage)
     }
 
     // MARK: - Private
+
+    /// Create a blank assistant message marked as streaming and append it to the session.
+    private func addStreamingPlaceholder() -> ChatMessage {
+        let message = ChatMessage(role: .assistant, text: "")
+        message.isStreaming = true
+        session.messages.append(message)
+        return message
+    }
 
     private func startStreaming(assistantMessage: ChatMessage) {
         isStreaming = true
