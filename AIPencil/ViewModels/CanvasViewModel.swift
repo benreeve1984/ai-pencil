@@ -96,6 +96,16 @@ final class CanvasViewModel: ObservableObject {
         canvasView.undoManager?.canRedo ?? false
     }
 
+    // MARK: - Tool Picker
+
+    /// Re-show the PencilKit tool picker by reclaiming first responder.
+    /// The picker hides whenever the canvas loses focus (e.g. tapping into the chat pane).
+    func showToolPicker() {
+        toolPicker.setVisible(true, forFirstResponder: canvasView)
+        toolPicker.addObserver(canvasView)
+        canvasView.becomeFirstResponder()
+    }
+
     // MARK: - Drawing Policy
 
     func applyDrawingPolicy() {

@@ -33,6 +33,15 @@ struct CanvasPaneView: View {
                 Divider()
                     .frame(height: 20)
 
+                // Show/hide PencilKit tool picker (pen, highlighter, eraser, etc.)
+                Button {
+                    viewModel.showToolPicker()
+                } label: {
+                    Image(systemName: "pencil.tip.crop.circle")
+                        .font(.title3)
+                }
+                .accessibilityLabel("Show pencil tools")
+
                 // Finger drawing toggle (no effect in Simulator — always .anyInput)
                 Button {
                     viewModel.allowFingerDrawing.toggle()
