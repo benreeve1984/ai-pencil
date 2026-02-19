@@ -1,0 +1,111 @@
+import SwiftUI
+import PencilKit
+import Combine
+
+/// Manages the PencilKit canvas state, drawing persistence, and image export.
+///
+/// Owns the PKCanvasView instance to avoid UIViewRepresentable lifecycle issues
+/// (SwiftUI can recreate UIViewRepresentable wrappers, losing the UIKit view).
+@MainActor
+final class CanvasViewModel: ObservableObject {
+
+    let canvasView = PKCanvasView()
+
+    /// Strong reference to the tool picker — if this is deallocated, the picker disappears.
+    let toolPicker = PKToolPicker()
+
+    /// When true, both finger and Apple Pencil can draw.
+    /// When false, only Apple Pencil draws and fingers scroll/pan.
+    @Published var allowFingerDrawing: Bool = false {
+        didSet { applyDrawingPolicy() }
+    }
+
+    private var session: Session?
+    private var saveDebounceTimer: Timer?
+
+    // MARK: - Session Lifecycle
+
+    /// Load the saved drawing data for a session into the canvas.
+    func loadDrawing(for session: Session) {
+        self.session = session
+
+        if let data = session.canvasData {
+            do {
+                let drawing = try PKDrawing(data: data)
+                canvasView.drawing = drawing
+            } catch {
+                // REVIEW: Could log this. For now, start with a blank canvas.
+                canvasView.drawing = PKDrawing()
+            }
+        } else {
+            canvasView.drawing = PKDrawing()
+        }
+    }
+
+    /// Persist the current canvas drawing to the session's SwiftData store.
+    /// Called on a debounce timer after each stroke and on session switch/app background.
+    func saveDrawing() {
+        guard let session else { return }
+        session.canvasData = canvasView.drawing.dataRepresentation()
+        session.updatedAt = Date()
+    }
+
+    /// Schedule a debounced save (avoids excessive writes during rapid drawing).
+    func debouncedSave() {
+        saveDebounceTimer?.invalidate()
+        saveDebounceTimer = Timer.scheduledTimer(
+            withTimeInterval: Constants.canvasSaveDebounceInterval,
+            repeats: false
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.saveDrawing()
+            }
+        }
+    }
+
+    // MARK: - Export
+
+    /// Export the current canvas as a base64 JPEG for the Anthropic Vision API.
+    /// Returns `nil` if the canvas is empty (no strokes).
+    func exportForAPI() -> String? {
+        CanvasExportService.exportDrawing(
+            canvasView.drawing,
+            canvasBounds: canvasView.bounds
+        )
+    }
+
+    // MARK: - Canvas Actions
+
+    func clearCanvas() {
+        canvasView.drawing = PKDrawing()
+        saveDrawing()
+    }
+
+    func undo() {
+        canvasView.undoManager?.undo()
+        debouncedSave()
+    }
+
+    func redo() {
+        canvasView.undoManager?.redo()
+        debouncedSave()
+    }
+
+    var canUndo: Bool {
+        canvasView.undoManager?.canUndo ?? false
+    }
+
+    var canRedo: Bool {
+        canvasView.undoManager?.canRedo ?? false
+    }
+
+    // MARK: - Drawing Policy
+
+    func applyDrawingPolicy() {
+        #if targetEnvironment(simulator)
+        canvasView.drawingPolicy = .anyInput
+        #else
+        canvasView.drawingPolicy = allowFingerDrawing ? .anyInput : .pencilOnly
+        #endif
+    }
+}
