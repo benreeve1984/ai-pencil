@@ -14,6 +14,16 @@ final class CanvasViewModel: ObservableObject {
     /// Strong reference to the tool picker — if this is deallocated, the picker disappears.
     let toolPicker = PKToolPicker()
 
+    /// Reflects the current canvas background — set by PencilCanvasView whenever the
+    /// resolved appearance changes. Used by exportForAPI to normalise dark-mode strokes.
+    var isDarkCanvas: Bool = false
+
+    /// Tracks whether the initial default ink has been applied after the tool picker
+    /// first becomes first responder. PencilKit applies its stored tool on
+    /// becomeFirstResponder(), potentially overriding our colour; this flag ensures
+    /// we re-set the mode-correct default exactly once after that happens.
+    var toolInitialized = false
+
     private var session: Session?
     private var saveDebounceTimer: Timer?
 
@@ -61,7 +71,8 @@ final class CanvasViewModel: ObservableObject {
     func exportForAPI() -> String? {
         CanvasExportService.exportDrawing(
             canvasView.drawing,
-            canvasBounds: canvasView.bounds
+            canvasBounds: canvasView.bounds,
+            isDarkCanvas: isDarkCanvas
         )
     }
 
