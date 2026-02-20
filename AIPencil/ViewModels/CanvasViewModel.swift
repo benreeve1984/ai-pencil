@@ -14,12 +14,6 @@ final class CanvasViewModel: ObservableObject {
     /// Strong reference to the tool picker — if this is deallocated, the picker disappears.
     let toolPicker = PKToolPicker()
 
-    /// When true, both finger and Apple Pencil can draw.
-    /// When false, only Apple Pencil draws and fingers scroll/pan.
-    @Published var allowFingerDrawing: Bool = false {
-        didSet { applyDrawingPolicy() }
-    }
-
     private var session: Session?
     private var saveDebounceTimer: Timer?
 
@@ -112,7 +106,7 @@ final class CanvasViewModel: ObservableObject {
         #if targetEnvironment(simulator)
         canvasView.drawingPolicy = .anyInput
         #else
-        canvasView.drawingPolicy = allowFingerDrawing ? .anyInput : .pencilOnly
+        canvasView.drawingPolicy = .default
         #endif
     }
 }

@@ -42,18 +42,6 @@ struct CanvasPaneView: View {
                 }
                 .accessibilityLabel("Show pencil tools")
 
-                // Finger drawing toggle (no effect in Simulator — always .anyInput)
-                Button {
-                    viewModel.allowFingerDrawing.toggle()
-                } label: {
-                    Image(systemName: viewModel.allowFingerDrawing
-                          ? "hand.draw.fill" : "hand.draw")
-                        .font(.title3)
-                        .foregroundStyle(viewModel.allowFingerDrawing ? .blue : .primary)
-                }
-                .accessibilityLabel(viewModel.allowFingerDrawing
-                    ? "Finger drawing on" : "Finger drawing off")
-
                 Divider()
                     .frame(height: 20)
 
