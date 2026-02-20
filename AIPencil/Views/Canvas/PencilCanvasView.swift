@@ -71,6 +71,8 @@ struct PencilCanvasView: UIViewRepresentable {
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             viewModel.debouncedSave()
+            // Notify SwiftUI so toolbar re-evaluates canUndo/canRedo
+            viewModel.objectWillChange.send()
         }
     }
 }
