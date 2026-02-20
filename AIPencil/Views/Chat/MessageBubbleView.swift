@@ -16,6 +16,7 @@ struct MessageBubbleView: View {
 
     @State private var isEditing = false
     @State private var editText = ""
+    @State private var showingFullImage = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -51,19 +52,25 @@ struct MessageBubbleView: View {
 
     @ViewBuilder
     private var contentView: some View {
-        // Canvas image thumbnail (user messages only)
+        // Canvas image thumbnail (user messages only) — tap to expand
         if let imageBase64 = message.imageBase64,
            let data = Data(base64Encoded: imageBase64),
            let uiImage = UIImage(data: data) {
-            Image(uiImage: uiImage)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(maxHeight: 120)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                )
+            Button { showingFullImage = true } label: {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxHeight: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showingFullImage) {
+                CanvasImageFullScreen(image: uiImage, sentAt: message.createdAt)
+            }
         }
 
         // Text / LaTeX rendering
@@ -143,6 +150,8 @@ struct MessageBubbleView: View {
 
     // MARK: - Context Menu
 
+    // MARK: - Full-screen canvas image
+
     @ViewBuilder
     private var contextMenuItems: some View {
         if !isStreaming {
@@ -166,6 +175,33 @@ struct MessageBubbleView: View {
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash")
             }
+        }
+    }
+}
+
+// MARK: - Full-screen canvas image sheet
+
+private struct CanvasImageFullScreen: View {
+    let image: UIImage
+    let sentAt: Date
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
+                .navigationTitle(Text(sentAt, style: .time))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
+                }
         }
     }
 }
