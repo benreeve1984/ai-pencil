@@ -23,6 +23,33 @@ struct ImageProcessor {
         return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
     }
 
+    /// Composite `image` (which may have a transparent background) onto a solid `background` colour.
+    /// Used before inverting a dark-mode drawing so the transparent areas become black, not white.
+    static func composite(_ image: UIImage, on background: UIColor) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: image.size)
+        return renderer.image { ctx in
+            background.setFill()
+            ctx.fill(CGRect(origin: .zero, size: image.size))
+            image.draw(at: .zero)
+        }
+    }
+
+    /// Invert all pixel colours using CIColorInvert.
+    /// Used to convert white-strokes-on-black into black-strokes-on-white for AI export.
+    static func invertColors(_ image: UIImage) -> UIImage {
+        guard let ciImage = CIImage(image: image) else { return image }
+
+        let filter = CIFilter(name: "CIColorInvert")!
+        filter.setValue(ciImage, forKey: kCIInputImageKey)
+
+        guard let output = filter.outputImage,
+              let cgImage = ciContext.createCGImage(output, from: output.extent) else {
+            return image
+        }
+
+        return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+
     /// Resize an image so its longest edge is at most `maxDimension` pixels.
     /// Preserves aspect ratio. Returns the original if already within bounds.
     static func resize(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
