@@ -16,6 +16,10 @@ struct PencilCanvasView: UIViewRepresentable {
         let canvasView = viewModel.canvasView
 
         viewModel.applyDrawingPolicy()
+        // Force light mode so strokes are always black on white — required because
+        // the canvas is exported as a JPEG for the AI model, and dark mode would
+        // produce white-on-white (invisible) after grayscale conversion.
+        canvasView.overrideUserInterfaceStyle = .light
         canvasView.backgroundColor = .systemBackground
         canvasView.isOpaque = true
         canvasView.delegate = context.coordinator
